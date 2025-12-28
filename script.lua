@@ -1,3 +1,77 @@
+-- ============================================
+-- WHITELIST SYSTEM - DO NOT REMOVE
+-- ============================================
+
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Your GitHub whitelist URL
+local WHITELIST_URL = "https://raw.githubusercontent.com/Shookenblook/Lol/main/whitelist.json"
+
+-- Function to fetch whitelist
+local function fetchWhitelist()
+    local success, result = pcall(function()
+        return game:HttpGet(WHITELIST_URL)
+    end)
+    
+    if success then
+        local data = HttpService:JSONDecode(result)
+        return data
+    else
+        warn("Failed to fetch whitelist: " .. tostring(result))
+        return nil
+    end
+end
+
+-- Function to check if player is whitelisted
+local function isWhitelisted(player, whitelistData)
+    if not whitelistData then
+        return false
+    end
+    
+    -- Check User ID (most secure method)
+    if whitelistData.whitelisted_users then
+        for _, userId in ipairs(whitelistData.whitelisted_users) do
+            if player.UserId == userId then
+                return true
+            end
+        end
+    end
+    
+    -- Check by ACTUAL USERNAME (not display name)
+    if whitelistData.whitelisted_names then
+        for _, username in ipairs(whitelistData.whitelisted_names) do
+            -- player.Name returns the ACTUAL username, NOT display name
+            if player.Name == username then
+                return true
+            end
+        end
+    end
+    
+    return false
+end
+
+-- Main whitelist check
+print("🔒 Piko.wtf - Checking whitelist...")
+print("👤 Account Name (Username): " .. LocalPlayer.Name)
+print("🎭 Display Name: " .. LocalPlayer.DisplayName)
+print("🔢 User ID: " .. LocalPlayer.UserId)
+
+local whitelistData = fetchWhitelist()
+
+if not whitelistData or not isWhitelisted(LocalPlayer, whitelistData) then
+    LocalPlayer:Kick("❌ ACCESS DENIED - Piko.wtf\n\n🚫 You are not whitelisted for this script\n\n📋 Your Details:\n   Username: " .. LocalPlayer.Name .. "\n   Display Name: " .. LocalPlayer.DisplayName .. "\n   User ID: " .. LocalPlayer.UserId .. "\n\n💬 Contact kovaak on Discord for access")
+    return
+end
+
+print("✅ Whitelist verified! Loading Piko.wtf...")
+print("✅ Welcome, @" .. LocalPlayer.Name .. " (" .. LocalPlayer.DisplayName .. ")")
+
+-- ============================================
+-- MAIN SCRIPT STARTS HERE
+-- ============================================
+
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
