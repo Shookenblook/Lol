@@ -14,15 +14,15 @@ local Window = Rayfield:CreateWindow({
         Invite = "noinvitelink",
         RememberJoins = true
     },
-    KeySystem = true,
+    KeySystem = false,
     KeySettings = {
-        Title = "Piko.wtf Key System",
-        Subtitle = "Enter Key to Access",
-        Note = "The key is: popcorn",
-        FileName = "PikoKey",
+        Title = "Key System",
+        Subtitle = "Enter Key",
+        Note = "No method of obtaining key provided",
+        FileName = "Key",
         SaveKey = true,
         GrabKeyFromSite = false,
-        Key = {"popcorn"}
+        Key = {"Hello"}
     }
 })
 
@@ -220,43 +220,19 @@ local TriggerBotDelaySlider = CombatTab:CreateSlider({
     end,
 })
 
-local lastShot = tick()
-
-game:GetService("RunService").RenderStepped:Connect(function()
-    if not getgenv().TriggerBotEnabled then return end
-    
-    local player = game.Players.LocalPlayer
-    if not player or not player.Character then return end
-    
-    local mouse = player:GetMouse()
-    local target = mouse.Target
-    
-    if target then
-        -- Check if we hit a player's character part
-        local character = target.Parent
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+game:GetService("RunService").Heartbeat:Connect(function()
+    if getgenv().TriggerBotEnabled then
+        local player = game.Players.LocalPlayer
+        local mouse = player:GetMouse()
+        local target = mouse.Target
         
-        if humanoid and humanoid.Health > 0 then
-            local targetPlayer = game.Players:GetPlayerFromCharacter(character)
-            
-            -- Make sure it's another player, not us
-            if targetPlayer and targetPlayer ~= player and targetPlayer.Team ~= player.Team then
-                -- Check cooldown
-                if tick() - lastShot >= (getgenv().TriggerBotDelay / 1000) then
-                    lastShot = tick()
-                    
-                    -- Try multiple methods to click
-                    local success = pcall(function()
-                        mouse1click()
-                    end)
-                    
-                    if not success then
-                        pcall(function()
-                            mouse1press()
-                            task.wait(0.01)
-                            mouse1release()
-                        end)
-                    end
+        if target and target.Parent then
+            local humanoid = target.Parent:FindFirstChild("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local targetPlayer = game.Players:GetPlayerFromCharacter(target.Parent)
+                if targetPlayer and targetPlayer ~= player then
+                    task.wait(getgenv().TriggerBotDelay / 1000)
+                    mouse1click()
                 end
             end
         end
@@ -527,6 +503,77 @@ local PlayersTab = Window:CreateTab("Players", 4483362458)
 
 local PlayersSection = PlayersTab:CreateSection("Player Options")
 
+-- Variables for speed and jump
+getgenv().CustomWalkSpeed = 16
+getgenv().CustomJumpPower = 50
+getgenv().WalkSpeedEnabled = false
+getgenv().JumpPowerEnabled = false
+
+-- Continuous loop to bypass Da Hood anti-cheat
+game:GetService("RunService").Heartbeat:Connect(function()
+    local player = game.Players.LocalPlayer
+    if player and player.Character then
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            if getgenv().WalkSpeedEnabled and humanoid.WalkSpeed ~= getgenv().CustomWalkSpeed then
+                humanoid.WalkSpeed = getgenv().CustomWalkSpeed
+            end
+            if getgenv().JumpPowerEnabled and humanoid.JumpPower ~= getgenv().CustomJumpPower then
+                humanoid.JumpPower = getgenv().CustomJumpPower
+            end
+        end
+    end
+end)
+
+-- Also hook the .Changed event
+local function setupSpeedBypass()
+    local player = game.Players.LocalPlayer
+    if player.Character then
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+                if getgenv().WalkSpeedEnabled then
+                    humanoid.WalkSpeed = getgenv().CustomWalkSpeed
+                end
+            end)
+            
+            humanoid:GetPropertyChangedSignal("JumpPower"):Connect(function()
+                if getgenv().JumpPowerEnabled then
+                    humanoid.JumpPower = getgenv().CustomJumpPower
+                end
+            end)
+        end
+    end
+end
+
+-- Setup on character spawn
+game.Players.LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.1)
+    setupSpeedBypass()
+end)
+
+setupSpeedBypass()
+
+local WalkSpeedToggle = PlayersTab:CreateToggle({
+    Name = "Enable Walk Speed",
+    CurrentValue = false,
+    Flag = "WalkSpeedToggle",
+    Callback = function(Value)
+        getgenv().WalkSpeedEnabled = Value
+        if Value then
+            local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = getgenv().CustomWalkSpeed
+            end
+        else
+            local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 16
+            end
+        end
+    end,
+})
+
 local WalkSpeedSlider = PlayersTab:CreateSlider({
     Name = "Walk Speed",
     Range = {16, 200},
@@ -535,7 +582,33 @@ local WalkSpeedSlider = PlayersTab:CreateSlider({
     CurrentValue = 16,
     Flag = "WalkSpeedSlider",
     Callback = function(Value)
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+        getgenv().CustomWalkSpeed = Value
+        if getgenv().WalkSpeedEnabled then
+            local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = Value
+            end
+        end
+    end,
+})
+
+local JumpPowerToggle = PlayersTab:CreateToggle({
+    Name = "Enable Jump Power",
+    CurrentValue = false,
+    Flag = "JumpPowerToggle",
+    Callback = function(Value)
+        getgenv().JumpPowerEnabled = Value
+        if Value then
+            local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.JumpPower = getgenv().CustomJumpPower
+            end
+        else
+            local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.JumpPower = 50
+            end
+        end
     end,
 })
 
@@ -547,7 +620,13 @@ local JumpPowerSlider = PlayersTab:CreateSlider({
     CurrentValue = 50,
     Flag = "JumpPowerSlider",
     Callback = function(Value)
-        game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
+        getgenv().CustomJumpPower = Value
+        if getgenv().JumpPowerEnabled then
+            local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.JumpPower = Value
+            end
+        end
     end,
 })
 
